@@ -1,12 +1,13 @@
 package main
 
 import "core:fmt"
+import vmem "core:mem/virtual"
 import "core:strings"
 import rl "vendor:raylib"
 
-WINDOW_WIDTH :: 800
-WINDOW_HEIGHT :: 600
-WINDOW_PADDING :: 5
+WINDOW_WIDTH: f32 : 800
+WINDOW_HEIGHT: f32 : 600
+WINDOW_PADDING: f32 : 5
 SPEED: f32 : 300
 
 BALL_MOVEMENT :: enum {
@@ -15,7 +16,7 @@ BALL_MOVEMENT :: enum {
 }
 
 main :: proc() {
-	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Blockball")
+	rl.InitWindow(i32(WINDOW_WIDTH), i32(WINDOW_HEIGHT), "Blockball")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(144)
 
@@ -23,12 +24,19 @@ main :: proc() {
 	ball_pos_y: f32 = 0.0
 	ball_direction := BALL_MOVEMENT.DOWN
 
+	level_arena: vmem.Arena
+	arena_allocator := vmem.arena_allocator(&level_arena)
+
+	targets := generate_targets(10, 10, arena_allocator)
+
 	for !rl.WindowShouldClose() {
 		delta := rl.GetFrameTime()
 		distance := delta * SPEED
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
+
+		draw_targets(targets)
 
 		if (rl.IsKeyDown(rl.KeyboardKey.A) && player_pos_x >= WINDOW_PADDING) {
 			player_pos_x -= distance
@@ -54,6 +62,7 @@ main :: proc() {
 		// End game check
 		if rl.CheckCollisionCircleLine({10, f32(ball_pos_y)}, BALL_RADIUS, {0, 590}, {800, 590}) {
 			fmt.println("You lost!")
+			vmem.arena_free_all(&level_arena)
 		}
 
 		// Top border collision
